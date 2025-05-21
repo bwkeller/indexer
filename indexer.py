@@ -93,13 +93,25 @@ def print_pages(pagelist):
         past_page = p
     return pstring
 
+def parse_skipstr(skipstr):
+    skiplist = []
+    for s in skipstr.split(','):
+        if '-' in s:
+            start, end = s.split('-')
+            start = int(start)
+            end = int(end)
+            skiplist += list(range(start, end+1))
+        else:
+            skiplist.append(int(s))
+    return skiplist
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
             prog='indexer.py',
             description='Generate an index from a PDF proof'
             )
     parser.add_argument('filename')
-    parser.add_argument('-s', '--skip', type=int, default=0,
+    parser.add_argument('-s', '--skip', type=str, default='0',
             help='Skip the first N pages')
     parser.add_argument('-c', '--count', action='store_true',
             help="Don't generate an index, instead list all words with the number of pages they appear on")
@@ -109,7 +121,13 @@ if __name__ == "__main__":
 
     reader = PdfReader(args.filename)
     page_words = []
-    for page in reader.pages[args.skip:]:
+    if args.skip:
+        skiplist = parse_skipstr(args.skip)
+    else:
+        skiplist = []
+    for page in reader.pages:
+        if page.page_number in skiplist:
+            continue
         words = split_words(page.extract_text())
         page_words.append(set(words))
     all_words = reduce(lambda x,y: x|y, page_words)

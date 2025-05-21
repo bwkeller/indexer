@@ -101,6 +101,10 @@ if __name__ == "__main__":
     parser.add_argument('filename')
     parser.add_argument('-s', '--skip', type=int, default=0,
             help='Skip the first N pages')
+    parser.add_argument('-c', '--count', action='store_true',
+            help="Don't generate an index, instead list all words with the number of pages they appear on")
+    parser.add_argument('-l', '--list', type=str,
+            help='List of words to include in the index (otherwise include everything)')
     args = parser.parse_args()
 
     reader = PdfReader(args.filename)
@@ -110,6 +114,13 @@ if __name__ == "__main__":
         page_words.append(set(words))
     all_words = reduce(lambda x,y: x|y, page_words)
     page_words, all_words = merge_words(page_words, all_words)
+    if args.list:
+        list_words = set(open(args.list).read().splitlines())
+        all_words = all_words & list_words
     index = {w:count_page(page_words, w) for w in all_words}
-    for w in sorted(all_words):
-        print(len(index[w]), w)
+    if args.count:
+        counts = {}
+        for w in sorted(all_words):
+            counts[w] = len(index[w])
+        for w in sorted(counts, key=counts.get, reverse=True):
+            print(f'{counts[w]} {w}')

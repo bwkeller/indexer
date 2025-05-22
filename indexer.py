@@ -10,11 +10,10 @@ def count_page(pwords, word):
     return sorted(indices)
 
 def split_words(text):
-    text = text.lower() # make everything lower-case
     text = re.sub(r'\s+', ' ', text).strip() # remove extra spaces
     text = re.sub(r'-\s', '', text).strip() # merge hyphenated line-broken words
     text = re.sub(r'\W|\d', ' ', text)
-    return filter(lambda x: len(x) > 1, text.split(' '))
+    return list(filter(lambda x: len(x) > 1, text.split(' ')))
 
 def merge_words(pwords, awords):
     new_awords = awords.copy()
@@ -124,10 +123,10 @@ def pretty_index(pagelist):
             idxstr += f'{splitted[0]}-{splitted[-1]},'
     return idxstr[:-1]
 
-def write_docx(index, all_words):
+def write_docx(index):
     from docx import Document
     doc = Document()
-    for w in sorted(all_words):
+    for w in sorted(index.keys(), key=str.casefold):
         doc.add_paragraph(f'{w}: {pretty_index(index[w])}')
     doc.save('index.docx')
 
@@ -149,6 +148,7 @@ if __name__ == "__main__":
 
     reader = PdfReader(args.filename)
     page_words = []
+    cap_words = set()
     if args.skip:
         skiplist = parse_skipstr(args.skip)
     else:
@@ -157,22 +157,26 @@ if __name__ == "__main__":
         if page.page_number in skiplist:
             continue
         words = split_words(page.extract_text())
-        page_words.append(set(words))
+        page_words.append(set([w.lower() for w in words]))
+        cap_words |= set(words)
     all_words = reduce(lambda x,y: x|y, page_words)
     page_words, all_words = merge_words(page_words, all_words)
     if args.list:
         list_words = set(open(args.list).read().splitlines())
         all_words = all_words & list_words
-    index = {w:count_page(page_words, w) for w in all_words}
+    index = {w:count_page(page_words, w.lower()) for w in all_words}
+    for w in cap_words:
+        if w.lower() not in cap_words and w.lower() in index.keys():
+            index[w] = index[w.lower()]
+            del index[w.lower()]
     if args.count:
         counts = {}
-        for w in sorted(all_words):
+        for w in sorted(index.keys()):
             counts[w] = len(index[w])
         for w in sorted(counts, key=counts.get, reverse=True):
             print(f'{counts[w]} {w}')
-    
-    if args.docx:
-        write_docx(index, all_words)
+    elif args.docx:
+        write_docx(index)
     else:
-        for w in sorted(all_words):
+        for w in sorted(index.keys(), key=str.casefold):
             print(f'{w}: {pretty_index(index[w])}')

@@ -7,7 +7,7 @@ from pypdf import PdfReader
 
 def count_page(pwords, word):
     indices = [i+1 for i in range(len(pwords)) if word in pwords[i]]
-    return indices
+    return sorted(indices)
 
 def split_words(text):
     text = text.lower() # make everything lower-case
@@ -105,6 +105,26 @@ def parse_skipstr(skipstr):
             skiplist.append(int(s))
     return skiplist
 
+def pretty_index(pagelist):
+    def counter(left, right):
+        leftmost = left.split(',')[-1]
+        rangecount = str.count(leftmost, '.')
+        leftint = int(leftmost.split('.')[0])
+        rightint = int(right)
+        if leftint+1+rangecount == rightint:
+            return f'{left}.{right}'
+        else:
+            return f'{left},{right}'
+    idxstr = ''
+    for c in reduce(counter, map(str, pagelist)).split(','):
+        splitted = c.split('.')
+        if splitted[0] == splitted[-1]:
+            idxstr += f'{splitted[0]},'
+        else:
+            idxstr += f'{splitted[0]}-{splitted[-1]},'
+    return idxstr[:-1]
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
             prog='indexer.py',
@@ -142,3 +162,6 @@ if __name__ == "__main__":
             counts[w] = len(index[w])
         for w in sorted(counts, key=counts.get, reverse=True):
             print(f'{counts[w]} {w}')
+    
+    for w in sorted(all_words):
+        print(f'{w}: {pretty_index(index[w])}')

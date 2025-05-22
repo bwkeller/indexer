@@ -124,6 +124,12 @@ def pretty_index(pagelist):
             idxstr += f'{splitted[0]}-{splitted[-1]},'
     return idxstr[:-1]
 
+def write_docx(index, all_words):
+    from docx import Document
+    doc = Document()
+    for w in sorted(all_words):
+        doc.add_paragraph(f'{w}: {pretty_index(index[w])}')
+    doc.save('index.docx')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -135,6 +141,8 @@ if __name__ == "__main__":
             help='Skip the first N pages')
     parser.add_argument('-c', '--count', action='store_true',
             help="Don't generate an index, instead list all words with the number of pages they appear on")
+    parser.add_argument('-d', '--docx', action='store_true',
+            help="Generate a MS word .docx file with the index")
     parser.add_argument('-l', '--list', type=str,
             help='List of words to include in the index (otherwise include everything)')
     args = parser.parse_args()
@@ -163,5 +171,8 @@ if __name__ == "__main__":
         for w in sorted(counts, key=counts.get, reverse=True):
             print(f'{counts[w]} {w}')
     
-    for w in sorted(all_words):
-        print(f'{w}: {pretty_index(index[w])}')
+    if args.docx:
+        write_docx(index, all_words)
+    else:
+        for w in sorted(all_words):
+            print(f'{w}: {pretty_index(index[w])}')
